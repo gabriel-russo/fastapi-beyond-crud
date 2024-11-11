@@ -7,11 +7,13 @@ from uuid import UUID as py_UUID, uuid4
 class Book(SQLModel, table=True):
     __tablename__ = "books"
 
-    uid: py_UUID = Field(sa_column=Column(UUID, primary_key=True, default=uuid4))
+    uid: py_UUID = Field(
+        sa_column=Column(UUID, nullable=False, primary_key=True, default=uuid4)
+    )
     title: str
     author: str
     publisher: str
-    published_date: str
+    published_date: datetime
     page_count: int
     language: str
     created_at: datetime = Field(sa_column=Column(TIMESTAMP, default=datetime.now))
