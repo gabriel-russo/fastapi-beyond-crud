@@ -3,15 +3,24 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
-from .schemas import UserCreateModel, UserLoginModel
+from datetime import datetime
+from .schemas import UserCreateModel, UserLoginModel, AccessToken
+from .dependencies import (
+    RefreshTokenBearer,
+    AccessTokenBearer,
+    get_current_user,
+    RoleChecker,
+)
 from .service import UserService
 from .models import User
 from .utils import create_access_token, verify_password
+from src.db.redis import add_jti_to_blocklist
 from src.db.main import get_session
 
 auth_router = APIRouter()
 
 user_service = UserService()
+role_checker = RoleChecker(["admin", "user"])
 
 
 @auth_router.post("/signup", response_model=User, status_code=status.HTTP_201_CREATED)
@@ -33,6 +42,13 @@ async def create_user_account(
     return new_user
 
 
+@auth_router.get("/me")
+async def get_current_user(
+    user=Depends(get_current_user), _: bool = Depends(role_checker)
+):
+    return user
+
+
 @auth_router.post("/login")
 async def login_users(
     login_data: UserLoginModel, session: AsyncSession = Depends(get_session)
@@ -48,7 +64,11 @@ async def login_users(
         )
 
         refresh_token = create_access_token(
-            user_data={"email": user.email, "user_uid": str(user.uid)},
+            user_data={
+                "email": user.email,
+                "user_uid": str(user.uid),
+                "user": user.role,
+            },
             refresh=True,
             expire=timedelta(days=1),
         )
@@ -65,4 +85,29 @@ async def login_users(
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid e-mail or password",
+    )
+
+
+@auth_router.get("/refresh_token")
+async def get_new_access_token(
+    token_detail: AccessToken = Depends(RefreshTokenBearer()),
+):
+    expiry_timestamp = token_detail.token["exp"]
+
+    if datetime.fromtimestamp(expiry_timestamp) > datetime.now():
+        new_access_token = create_access_token(user_data=token_detail.token["user"])
+
+        return JSONResponse(content={"access_token": new_access_token})
+
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token")
+
+
+@auth_router.get("/logout")
+async def revoke_token(token_detail: AccessToken = Depends(AccessTokenBearer())):
+    jti = token_detail.token["jti"]
+
+    await add_jti_to_blocklist(jti)
+
+    return JSONResponse(
+        content={"message": "Logged out successfully"}, status_code=status.HTTP_200_OK
     )
