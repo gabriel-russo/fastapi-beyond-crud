@@ -4,7 +4,13 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import datetime
-from .schemas import UserCreateModel, UserLoginModel, AccessToken
+from .schemas import (
+    UserCreateModel,
+    UserLoginModel,
+    AccessToken,
+    UserModel,
+    UserBookModel,
+)
 from .dependencies import (
     RefreshTokenBearer,
     AccessTokenBearer,
@@ -23,7 +29,9 @@ user_service = UserService()
 role_checker = RoleChecker(["admin", "user"])
 
 
-@auth_router.post("/signup", response_model=User, status_code=status.HTTP_201_CREATED)
+@auth_router.post(
+    "/signup", response_model=UserModel, status_code=status.HTTP_201_CREATED
+)
 async def create_user_account(
     user_data: UserCreateModel, session: AsyncSession = Depends(get_session)
 ):
@@ -42,7 +50,7 @@ async def create_user_account(
     return new_user
 
 
-@auth_router.get("/me")
+@auth_router.get("/me", response_model=UserBookModel)
 async def get_current_user(
     user=Depends(get_current_user), _: bool = Depends(role_checker)
 ):
