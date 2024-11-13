@@ -18,7 +18,6 @@ from .dependencies import (
     RoleChecker,
 )
 from .service import UserService
-from .models import User
 from .utils import create_access_token, verify_password
 from src.db.redis import add_jti_to_blocklist
 from src.db.main import get_session

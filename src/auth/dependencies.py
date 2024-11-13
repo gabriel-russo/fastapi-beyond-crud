@@ -5,10 +5,10 @@ from fastapi.security import HTTPBearer
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.redis import token_in_blocklist
 from src.db.main import get_session
+from src.db.models import User
 from .schemas import AccessToken
 from .utils import decode_token
 from .service import UserService
-from .models import User
 
 user_service = UserService()
 
