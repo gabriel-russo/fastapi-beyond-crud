@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, Depends
 from fastapi.exceptions import HTTPException
 from typing import List
 from sqlmodel.ext.asyncio.session import AsyncSession
-from .schemas import Book, BookUpdateModel, BookCreateModel
+from .schemas import Book, BookUpdateModel, BookCreateModel, BookDetailModel
 from src.books.service import BookService
 from src.db.main import get_session
 from src.auth.dependencies import AccessTokenBearer, RoleChecker
@@ -14,7 +14,7 @@ access_token_bearer = AccessTokenBearer()
 role_checker = Depends(RoleChecker(["admin", "user"]))
 
 
-@book_router.get("/", response_model=List[Book], dependencies=[role_checker])
+@book_router.get("/", response_model=List[BookDetailModel], dependencies=[role_checker])
 async def get_all_books(
     session: AsyncSession = Depends(get_session),
     token_details: AccessToken = Depends(access_token_bearer),
@@ -25,7 +25,9 @@ async def get_all_books(
 
 
 @book_router.get(
-    "/user/{user_uid}", response_model=List[Book], dependencies=[role_checker]
+    "/user/{user_uid}",
+    response_model=List[BookDetailModel],
+    dependencies=[role_checker],
 )
 async def get_user_book_submissions(
     user_uid: str,
@@ -53,12 +55,14 @@ async def create_a_books(
     return new_book
 
 
-@book_router.get("/{book_uid}", response_model=Book, dependencies=[role_checker])
+@book_router.get(
+    "/{book_uid}", response_model=BookDetailModel, dependencies=[role_checker]
+)
 async def get_book(
     book_uid: str,
     session: AsyncSession = Depends(get_session),
-    token_details: AccessToken = Depends(access_token_bearer),
-) -> Book:
+    _: AccessToken = Depends(access_token_bearer),
+) -> dict:
     book = await book_service.get_book(book_uid, session)
 
     if book:

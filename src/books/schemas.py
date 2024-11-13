@@ -1,7 +1,8 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
 from uuid import UUID
+from src.reviews.schemas import ReviewModel
 
 
 class Book(BaseModel):
@@ -15,6 +16,10 @@ class Book(BaseModel):
     user_uid: UUID
     created_at: datetime
     updated_at: datetime
+
+
+class BookDetailModel(Book):
+    reviews: List[ReviewModel]
 
 
 class BookCreateModel(BaseModel):
